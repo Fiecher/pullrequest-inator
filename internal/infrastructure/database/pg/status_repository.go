@@ -8,15 +8,15 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type StatusPostgres struct {
+type StatusPGRepository struct {
 	db *pgxpool.Pool
 }
 
-func NewStatusPostgres(db *pgxpool.Pool) *StatusPostgres {
-	return &StatusPostgres{db: db}
+func NewStatusPGRepository(db *pgxpool.Pool) *StatusPGRepository {
+	return &StatusPGRepository{db: db}
 }
 
-func (r *StatusPostgres) GetByID(ctx context.Context, id uuid.UUID) (*models.Status, error) {
+func (r *StatusPGRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Status, error) {
 	var s models.Status
 	if err := r.db.QueryRow(ctx,
 		`SELECT id, name FROM pull_request_statuses WHERE id = $1`, id,
@@ -27,7 +27,7 @@ func (r *StatusPostgres) GetByID(ctx context.Context, id uuid.UUID) (*models.Sta
 	return &s, nil
 }
 
-func (r *StatusPostgres) List(ctx context.Context) ([]*models.Status, error) {
+func (r *StatusPGRepository) List(ctx context.Context) ([]*models.Status, error) {
 	rows, err := r.db.Query(ctx,
 		`SELECT id, name FROM pull_request_statuses ORDER BY name`,
 	)
