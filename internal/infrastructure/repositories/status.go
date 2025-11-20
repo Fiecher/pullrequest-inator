@@ -7,5 +7,6 @@ import (
 )
 
 type Status interface {
-	Repository[models.Status, uuid.UUID]
+	FindByID(id uuid.UUID) (*models.Status, error)
+	FindAll() ([]*models.Status, error)
 }
