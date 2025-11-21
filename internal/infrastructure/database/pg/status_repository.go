@@ -2,35 +2,42 @@ package pg
 
 import (
 	"context"
+	"errors"
 	"pullrequest-manager/internal/domain/models"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type StatusPGRepository struct {
+var ErrStatusNotFound = errors.New("status not found")
+
+type StatusRepository struct {
 	db *pgxpool.Pool
 }
 
-func NewStatusPGRepository(db *pgxpool.Pool) *StatusPGRepository {
-	return &StatusPGRepository{db: db}
+func NewStatusRepository(db *pgxpool.Pool) *StatusRepository {
+	return &StatusRepository{db: db}
 }
 
-func (r *StatusPGRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Status, error) {
+const (
+	getStatusByIDQuery = `SELECT id, name FROM pull_request_statuses WHERE id = $1`
+	listStatusesQuery  = `SELECT id, name FROM pull_request_statuses ORDER BY name`
+)
+
+func (r *StatusRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Status, error) {
 	var s models.Status
-	if err := r.db.QueryRow(ctx,
-		`SELECT id, name FROM pull_request_statuses WHERE id = $1`, id,
-	).Scan(&s.ID, &s.Name); err != nil {
+	if err := r.db.QueryRow(ctx, getStatusByIDQuery, id).Scan(&s.ID, &s.Name); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrStatusNotFound
+		}
 		return nil, err
 	}
-
 	return &s, nil
 }
 
-func (r *StatusPGRepository) List(ctx context.Context) ([]*models.Status, error) {
-	rows, err := r.db.Query(ctx,
-		`SELECT id, name FROM pull_request_statuses ORDER BY name`,
-	)
+func (r *StatusRepository) List(ctx context.Context) ([]*models.Status, error) {
+	rows, err := r.db.Query(ctx, listStatusesQuery)
 	if err != nil {
 		return nil, err
 	}
@@ -44,5 +51,9 @@ func (r *StatusPGRepository) List(ctx context.Context) ([]*models.Status, error)
 		}
 		statuses = append(statuses, &s)
 	}
-	return statuses, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return statuses, nil
 }
