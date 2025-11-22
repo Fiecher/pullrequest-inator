@@ -3,7 +3,9 @@ package pg
 import (
 	"context"
 	"errors"
-	"pullrequest-inator/internal/domain/models"
+	"fmt"
+	"pullrequest-inator/internal/api/dtos"
+	"pullrequest-inator/internal/infrastructure/models"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -187,6 +189,47 @@ func (r *TeamRepository) FindByName(ctx context.Context, name string) (*models.T
 	}
 
 	return team, nil
+}
+
+func (r *TeamRepository) CreateWithUsers(ctx context.Context, teamReq *dtos.Team) error {
+	tx, err := r.db.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	for _, member := range teamReq.Members {
+		userID, err := uuid.Parse(member.UserId)
+		if err != nil {
+			return fmt.Errorf("invalid user_id %q: %w", member.UserId, err)
+		}
+
+		_, err = tx.Exec(ctx, `
+            INSERT INTO users (id, username, is_active, created_at, updated_at)
+            VALUES ($1, $2, $3, NOW(), NOW())
+            ON CONFLICT (id) DO UPDATE SET
+                username = EXCLUDED.username,
+                is_active = EXCLUDED.is_active,
+                updated_at = NOW()
+        `, userID, member.Username, member.IsActive)
+		if err != nil {
+			return fmt.Errorf("upsert user %s: %w", userID, err)
+		}
+	}
+
+	var teamID uuid.UUID
+	if err := tx.QueryRow(ctx, insertTeamQuery, teamReq.TeamName).Scan(&teamID); err != nil {
+		return fmt.Errorf("create team: %w", err)
+	}
+
+	for _, member := range teamReq.Members {
+		userID := uuid.MustParse(member.UserId)
+		if _, err := tx.Exec(ctx, insertTeamUserQuery, teamID, userID); err != nil {
+			return fmt.Errorf("link user %s to team: %w", userID, err)
+		}
+	}
+
+	return tx.Commit(ctx)
 }
 
 func (r *TeamRepository) FindByUserID(ctx context.Context, userID uuid.UUID) (*models.Team, error) {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"pullrequest-inator/internal/domain/models"
+	"pullrequest-inator/internal/infrastructure/models"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"

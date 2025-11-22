@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"pullrequest-inator/internal/domain/models"
+	"pullrequest-inator/internal/infrastructure/models"
 	"time"
 
 	"github.com/google/uuid"
@@ -47,11 +47,12 @@ const (
 	deletePullRequestQuery = `
 		DELETE FROM pull_requests WHERE id = $1;
 	`
-	selectByAuthorQuery = `
-		SELECT id, title, author_id, status_id, merged_at, created_at, updated_at
-		FROM pull_requests
-		WHERE author_id = $1
-		ORDER BY created_at DESC;
+	selectByReviewerQuery = `
+		SELECT pr.id, pr.title, pr.author_id, pr.status_id, pr.merged_at, pr.created_at, pr.updated_at
+		FROM pull_requests pr
+		INNER JOIN pull_request_reviewers prr ON pr.id = prr.pull_request_id
+		WHERE prr.reviewer_id = $1
+		ORDER BY pr.created_at DESC;
 	`
 	insertReviewerQuery = `
 		INSERT INTO pull_request_reviewers (pull_request_id, reviewer_id, assigned_at)
@@ -207,10 +208,10 @@ func (r *PullRequestRepository) DeleteByID(ctx context.Context, id uuid.UUID) er
 	return nil
 }
 
-func (r *PullRequestRepository) FindByAuthor(ctx context.Context, authorID uuid.UUID) ([]*models.PullRequest, error) {
-	rows, err := r.db.Query(ctx, selectByAuthorQuery, authorID)
+func (r *PullRequestRepository) FindByReviewer(ctx context.Context, userID uuid.UUID) ([]*models.PullRequest, error) {
+	rows, err := r.db.Query(ctx, selectByReviewerQuery, userID)
 	if err != nil {
-		return nil, fmt.Errorf("get pull requests by author %s: %w", authorID, err)
+		return nil, fmt.Errorf("get pull requests by user %s: %w", userID, err)
 	}
 	defer rows.Close()
 
@@ -232,7 +233,7 @@ func (r *PullRequestRepository) FindByAuthor(ctx context.Context, authorID uuid.
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterating over pull request rows for author %s: %w", authorID, err)
+		return nil, fmt.Errorf("iterating over pull request rows for user %s: %w", userID, err)
 	}
 
 	return list, nil
