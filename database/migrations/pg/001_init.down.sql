@@ -22,5 +22,3 @@ DROP TABLE IF EXISTS team_user;
 DROP TABLE IF EXISTS teams;
 DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS pull_request_statuses;
-
-DROP EXTENSION IF EXISTS pgcrypto;

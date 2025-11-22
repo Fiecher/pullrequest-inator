@@ -1,8 +1,6 @@
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
 CREATE TABLE IF NOT EXISTS pull_request_statuses
 (
-    id   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id   BIGSERIAL PRIMARY KEY,
     name VARCHAR(50) NOT NULL UNIQUE
 );
 
@@ -15,7 +13,7 @@ ON CONFLICT (name) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS users
 (
-    id         UUID PRIMARY KEY         DEFAULT gen_random_uuid(),
+    id         BIGSERIAL PRIMARY KEY,
     username   VARCHAR(64) NOT NULL UNIQUE,
     is_active  BOOLEAN     NOT NULL     DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -26,7 +24,7 @@ CREATE TABLE IF NOT EXISTS users
 
 CREATE TABLE IF NOT EXISTS teams
 (
-    id         UUID PRIMARY KEY                  DEFAULT gen_random_uuid(),
+    id         BIGSERIAL PRIMARY KEY,
     name       VARCHAR(64)              NOT NULL UNIQUE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
@@ -36,8 +34,8 @@ CREATE TABLE IF NOT EXISTS teams
 
 CREATE TABLE IF NOT EXISTS team_user
 (
-    team_id UUID NOT NULL,
-    user_id UUID NOT NULL,
+    team_id BIGSERIAL NOT NULL,
+    user_id BIGSERIAL NOT NULL,
     PRIMARY KEY (team_id, user_id),
     FOREIGN KEY (team_id) REFERENCES teams (id)
         ON DELETE CASCADE ON UPDATE CASCADE,
@@ -52,10 +50,10 @@ CREATE INDEX IF NOT EXISTS idx_user_team_user_id ON team_user (user_id);
 
 CREATE TABLE IF NOT EXISTS pull_requests
 (
-    id         UUID PRIMARY KEY         DEFAULT gen_random_uuid(),
+    id         BIGSERIAL PRIMARY KEY,
     title      VARCHAR(64) NOT NULL,
-    author_id  UUID        NOT NULL,
-    status_id  UUID        NOT NULL,
+    author_id  BIGINT         NOT NULL,
+    status_id  BIGINT        NOT NULL,
     merged_at  TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -73,8 +71,8 @@ CREATE INDEX IF NOT EXISTS idx_pull_requests_created_at ON pull_requests (create
 
 CREATE TABLE IF NOT EXISTS pull_request_reviewers
 (
-    pull_request_id UUID NOT NULL            DEFAULT gen_random_uuid(),
-    reviewer_id     UUID NOT NULL,
+    pull_request_id BIGINT NOT NULL,
+    reviewer_id     BIGINT NOT NULL,
     assigned_at     TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     PRIMARY KEY (pull_request_id, reviewer_id),
     FOREIGN KEY (reviewer_id) REFERENCES users (id)
