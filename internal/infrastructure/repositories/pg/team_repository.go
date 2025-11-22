@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"pullrequest-inator/internal/api/dtos"
+	"pullrequest-inator/internal/infrastructure/encoding"
 	"pullrequest-inator/internal/infrastructure/models"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -55,8 +55,8 @@ func (r *TeamRepository) Create(ctx context.Context, team *models.Team) error {
 	return tx.Commit(ctx)
 }
 
-func (r *TeamRepository) FindByID(ctx context.Context, id uuid.UUID) (*models.Team, error) {
-	team := &models.Team{UserIDs: []uuid.UUID{}}
+func (r *TeamRepository) FindByID(ctx context.Context, id int64) (*models.Team, error) {
+	team := &models.Team{UserIDs: []int64{}}
 
 	err := r.db.QueryRow(ctx, selectTeamByIDQuery, id).Scan(
 		&team.ID, &team.Name, &team.CreatedAt, &team.UpdatedAt,
@@ -72,7 +72,7 @@ func (r *TeamRepository) FindByID(ctx context.Context, id uuid.UUID) (*models.Te
 	defer rows.Close()
 
 	for rows.Next() {
-		var uid uuid.UUID
+		var uid int64
 		if err := rows.Scan(&uid); err != nil {
 			return nil, err
 		}
@@ -92,7 +92,7 @@ func (r *TeamRepository) FindAll(ctx context.Context) ([]*models.Team, error) {
 	teams := make([]*models.Team, 0)
 	for rows.Next() {
 		var t models.Team
-		t.UserIDs = []uuid.UUID{}
+		t.UserIDs = []int64{}
 
 		if err := rows.Scan(&t.ID, &t.Name, &t.CreatedAt, &t.UpdatedAt); err != nil {
 			return nil, err
@@ -103,7 +103,7 @@ func (r *TeamRepository) FindAll(ctx context.Context) ([]*models.Team, error) {
 			return nil, err
 		}
 		for memberRows.Next() {
-			var uid uuid.UUID
+			var uid int64
 			if err := memberRows.Scan(&uid); err != nil {
 				memberRows.Close()
 				return nil, err
@@ -145,7 +145,7 @@ func (r *TeamRepository) Update(ctx context.Context, team *models.Team) error {
 	return tx.Commit(ctx)
 }
 
-func (r *TeamRepository) DeleteByID(ctx context.Context, id uuid.UUID) error {
+func (r *TeamRepository) DeleteByID(ctx context.Context, id int64) error {
 	tx, err := r.db.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return err
@@ -165,7 +165,7 @@ func (r *TeamRepository) DeleteByID(ctx context.Context, id uuid.UUID) error {
 }
 
 func (r *TeamRepository) FindByName(ctx context.Context, name string) (*models.Team, error) {
-	team := &models.Team{UserIDs: []uuid.UUID{}}
+	team := &models.Team{UserIDs: []int64{}}
 
 	err := r.db.QueryRow(ctx, selectTeamByNameQuery, name).Scan(
 		&team.ID, &team.Name, &team.CreatedAt, &team.UpdatedAt,
@@ -181,7 +181,7 @@ func (r *TeamRepository) FindByName(ctx context.Context, name string) (*models.T
 	defer rows.Close()
 
 	for rows.Next() {
-		var uid uuid.UUID
+		var uid int64
 		if err := rows.Scan(&uid); err != nil {
 			return nil, err
 		}
@@ -199,11 +199,7 @@ func (r *TeamRepository) CreateWithUsers(ctx context.Context, teamReq *dtos.Team
 	defer tx.Rollback(ctx)
 
 	for _, member := range teamReq.Members {
-		userID, err := uuid.Parse(member.UserId)
-		if err != nil {
-			return fmt.Errorf("invalid user_id %q: %w", member.UserId, err)
-		}
-
+		id := encoding.DecodeID(member.UserId)
 		_, err = tx.Exec(ctx, `
             INSERT INTO users (id, username, is_active, created_at, updated_at)
             VALUES ($1, $2, $3, NOW(), NOW())
@@ -211,29 +207,29 @@ func (r *TeamRepository) CreateWithUsers(ctx context.Context, teamReq *dtos.Team
                 username = EXCLUDED.username,
                 is_active = EXCLUDED.is_active,
                 updated_at = NOW()
-        `, userID, member.Username, member.IsActive)
+        `, id, member.Username, member.IsActive)
 		if err != nil {
-			return fmt.Errorf("upsert user %s: %w", userID, err)
+			return fmt.Errorf("upsert user %s: %w", member.UserId, err)
 		}
 	}
 
-	var teamID uuid.UUID
+	var teamID int
 	if err := tx.QueryRow(ctx, insertTeamQuery, teamReq.TeamName).Scan(&teamID); err != nil {
 		return fmt.Errorf("create team: %w", err)
 	}
 
 	for _, member := range teamReq.Members {
-		userID := uuid.MustParse(member.UserId)
-		if _, err := tx.Exec(ctx, insertTeamUserQuery, teamID, userID); err != nil {
-			return fmt.Errorf("link user %s to team: %w", userID, err)
+		id := encoding.DecodeID(member.UserId)
+		if _, err := tx.Exec(ctx, insertTeamUserQuery, teamID, id); err != nil {
+			return fmt.Errorf("link user %s to team: %w", id, err)
 		}
 	}
 
 	return tx.Commit(ctx)
 }
 
-func (r *TeamRepository) FindByUserID(ctx context.Context, userID uuid.UUID) (*models.Team, error) {
-	team := &models.Team{UserIDs: []uuid.UUID{}}
+func (r *TeamRepository) FindByUserID(ctx context.Context, userID int64) (*models.Team, error) {
+	team := &models.Team{UserIDs: []int64{}}
 
 	err := r.db.QueryRow(ctx, selectTeamByUserIDQuery, userID).Scan(
 		&team.ID, &team.Name, &team.CreatedAt, &team.UpdatedAt,
@@ -249,7 +245,7 @@ func (r *TeamRepository) FindByUserID(ctx context.Context, userID uuid.UUID) (*m
 	defer rows.Close()
 
 	for rows.Next() {
-		var uid uuid.UUID
+		var uid int64
 		if err := rows.Scan(&uid); err != nil {
 			return nil, err
 		}

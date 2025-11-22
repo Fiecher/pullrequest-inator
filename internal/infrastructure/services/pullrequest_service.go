@@ -6,12 +6,11 @@ import (
 	"fmt"
 	"math/rand"
 	"pullrequest-inator/internal/api/dtos"
+	"pullrequest-inator/internal/infrastructure/encoding"
 	"pullrequest-inator/internal/infrastructure/models"
 	"pullrequest-inator/internal/infrastructure/repositories/interfaces"
 	"pullrequest-inator/internal/infrastructure/repositories/pg"
 	"time"
-
-	"github.com/google/uuid"
 )
 
 var (
@@ -41,8 +40,8 @@ func NewPullRequestService(userRepo repositories.User, prRepo repositories.PullR
 	}, nil
 }
 
-func (s *PullRequestService) CreateWithReviewers(ctx context.Context, prID uuid.UUID,
-	prName string, authorID uuid.UUID) (*dtos.PullRequest, error) {
+func (s *PullRequestService) CreateWithReviewers(ctx context.Context, prID int64,
+	prName string, authorID int64) (*dtos.PullRequest, error) {
 	existing, err := s.prRepo.FindByID(ctx, prID)
 	if err != nil && !errors.Is(err, pg.ErrPullRequestNotFound) {
 		return nil, fmt.Errorf("check for existing PR: %w", err)
@@ -64,7 +63,7 @@ func (s *PullRequestService) CreateWithReviewers(ctx context.Context, prID uuid.
 		return nil, fmt.Errorf("find team for author: %w", err)
 	}
 
-	var activeUsers []uuid.UUID
+	var activeUsers []int64
 	for _, uid := range team.UserIDs {
 		if uid == authorID {
 			continue
@@ -107,7 +106,7 @@ func (s *PullRequestService) CreateWithReviewers(ctx context.Context, prID uuid.
 	return dtos.ModelToPullRequestDTO(newPR, openStatus.Name), nil
 }
 
-func (s *PullRequestService) ReassignReviewer(ctx context.Context, userID uuid.UUID, prID uuid.UUID) (*dtos.ReassignReviewerResponse, error) {
+func (s *PullRequestService) ReassignReviewer(ctx context.Context, userID int64, prID int64) (*dtos.ReassignReviewerResponse, error) {
 	pr, err := s.prRepo.FindByID(ctx, prID)
 	if errors.Is(err, pg.ErrPullRequestNotFound) {
 		return nil, ErrPRNotFound
@@ -141,7 +140,7 @@ func (s *PullRequestService) ReassignReviewer(ctx context.Context, userID uuid.U
 		return nil, fmt.Errorf("find team for reviewer: %w", err)
 	}
 
-	var candidates []uuid.UUID
+	var candidates []int64
 	for _, uid := range team.UserIDs {
 		if uid == pr.AuthorID || contains(pr.ReviewersIDs, uid) {
 			continue
@@ -179,11 +178,11 @@ func (s *PullRequestService) ReassignReviewer(ctx context.Context, userID uuid.U
 
 	return &dtos.ReassignReviewerResponse{
 		Pr:         *dtos.ModelToPullRequestDTO(pr, statusName),
-		ReplacedBy: newReviewer.String(),
+		ReplacedBy: encoding.EncodeID(newReviewer),
 	}, nil
 }
 
-func (s *PullRequestService) FindPullRequestsByReviewer(ctx context.Context, userID uuid.UUID) ([]*dtos.PullRequest, error) {
+func (s *PullRequestService) FindPullRequestsByReviewer(ctx context.Context, userID int64) ([]*dtos.PullRequest, error) {
 	prs, err := s.prRepo.FindByReviewer(ctx, userID)
 	if err != nil {
 		return nil, err
@@ -202,7 +201,7 @@ func (s *PullRequestService) FindPullRequestsByReviewer(ctx context.Context, use
 	return dts, err
 }
 
-func (s *PullRequestService) MarkAsMerged(ctx context.Context, prID uuid.UUID) (*dtos.PullRequest, error) {
+func (s *PullRequestService) MarkAsMerged(ctx context.Context, prID int64) (*dtos.PullRequest, error) {
 	pr, err := s.prRepo.FindByID(ctx, prID)
 	if errors.Is(err, pg.ErrPullRequestNotFound) {
 		return nil, ErrPRNotFound
@@ -230,7 +229,7 @@ func (s *PullRequestService) MarkAsMerged(ctx context.Context, prID uuid.UUID) (
 	return dtos.ModelToPullRequestDTO(pr, mergedStatus.Name), nil
 }
 
-func (s *PullRequestService) GetUserReviews(ctx context.Context, userID uuid.UUID) (*dtos.UserGetReviewResponse, error) {
+func (s *PullRequestService) GetUserReviews(ctx context.Context, userID int64) (*dtos.UserGetReviewResponse, error) {
 	allPRs, err := s.prRepo.FindAll(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("find all PRs: %w", err)
@@ -251,21 +250,21 @@ func (s *PullRequestService) GetUserReviews(ctx context.Context, userID uuid.UUI
 			return nil, err
 		}
 		pullRequests[i] = dtos.PullRequestShort{
-			PullRequestId:   pr.ID.String(),
+			PullRequestId:   encoding.EncodeID(pr.ID),
 			PullRequestName: pr.Title,
-			AuthorId:        pr.AuthorID.String(),
+			AuthorId:        encoding.EncodeID(pr.AuthorID),
 			Status:          dtos.PullRequestStatus(status.Name),
 		}
 	}
 
 	return &dtos.UserGetReviewResponse{
-		UserId:       userID.String(),
+		UserId:       encoding.EncodeID(userID),
 		PullRequests: pullRequests,
 	}, nil
 
 }
 
-func isReviewer(reviewers []uuid.UUID, userID uuid.UUID) bool {
+func isReviewer(reviewers []int64, userID int64) bool {
 	for _, r := range reviewers {
 		if r == userID {
 			return true
@@ -275,18 +274,10 @@ func isReviewer(reviewers []uuid.UUID, userID uuid.UUID) bool {
 }
 
 func (s *PullRequestService) CreatePullRequest(ctx context.Context, req *dtos.PullRequest) (*dtos.PullRequest, error) {
-	prID := toUUID(req.PullRequestId)
-
-	authorID, err := uuid.Parse(req.AuthorId)
-	if err != nil {
-		return nil, errors.New("invalid author_id format")
-	}
+	prID := encoding.DecodeID(req.PullRequestId)
+	authorID := encoding.DecodeID(req.AuthorId)
 
 	return s.CreateWithReviewers(ctx, prID, req.PullRequestName, authorID)
-}
-
-func toUUID(externalID string) uuid.UUID {
-	return uuid.NewSHA1(uuid.NameSpaceOID, []byte(externalID))
 }
 
 func (s *PullRequestService) getOpenStatus(ctx context.Context) (*models.Status, error) {
@@ -315,22 +306,22 @@ func (s *PullRequestService) getMergedStatus(ctx context.Context) (*models.Statu
 	return nil, fmt.Errorf("status 'MERGED' not found")
 }
 
-func chooseRandomUsers(userIDs []uuid.UUID, max int) []uuid.UUID {
-	n := len(userIDs)
+func chooseRandomUsers(userIDs []int64, max int64) []int64 {
+	n := int64(len(userIDs))
 	if n <= max {
-		cpy := make([]uuid.UUID, len(userIDs))
+		cpy := make([]int64, len(userIDs))
 		copy(cpy, userIDs)
 		return cpy
 	}
-	selected := make([]uuid.UUID, 0, max)
-	perm := rand.Perm(n)
-	for i := 0; i < max; i++ {
+	selected := make([]int64, 0, max)
+	perm := rand.Perm(int(n))
+	for i := 0; i < int(max); i++ {
 		selected = append(selected, userIDs[perm[i]])
 	}
 	return selected
 }
 
-func contains(slice []uuid.UUID, item uuid.UUID) bool {
+func contains(slice []int64, item int64) bool {
 	for _, v := range slice {
 		if v == item {
 			return true

@@ -1,27 +1,29 @@
 package dtos
 
 import (
+	"pullrequest-inator/internal/infrastructure/encoding"
 	"pullrequest-inator/internal/infrastructure/models"
-
-	"github.com/google/uuid"
 )
 
 func ModelToPullRequestDTO(pr *models.PullRequest, statusName string) *PullRequest {
+	pullRequestID := encoding.EncodeID(pr.ID)
+	authorID := encoding.EncodeID(pr.AuthorID)
+
 	return &PullRequest{
-		PullRequestId:     pr.ID.String(),
+		PullRequestId:     pullRequestID,
 		PullRequestName:   pr.Title,
-		AuthorId:          pr.AuthorID.String(),
+		AuthorId:          authorID,
 		Status:            PullRequestStatus(statusName),
-		AssignedReviewers: uuidsToStrings(pr.ReviewersIDs),
+		AssignedReviewers: idsToStrings(pr.ReviewersIDs),
 		CreatedAt:         &pr.CreatedAt,
 		MergedAt:          pr.MergedAt,
 	}
 }
-
-func uuidsToStrings(ids []uuid.UUID) []string {
+func idsToStrings(ids []int64) []string {
 	strings := make([]string, len(ids))
 	for i, id := range ids {
-		strings[i] = id.String()
+		s := encoding.EncodeID(id)
+		strings[i] = s
 	}
 	return strings
 }

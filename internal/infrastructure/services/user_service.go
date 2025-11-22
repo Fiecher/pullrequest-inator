@@ -4,10 +4,9 @@ import (
 	"context"
 	"errors"
 	"pullrequest-inator/internal/api/dtos"
+	"pullrequest-inator/internal/infrastructure/encoding"
 	"pullrequest-inator/internal/infrastructure/models"
 	"pullrequest-inator/internal/infrastructure/repositories/interfaces"
-
-	"github.com/google/uuid"
 )
 
 type UserService struct {
@@ -26,13 +25,9 @@ func (s *UserService) RegisterUser(ctx context.Context, user *dtos.User) error {
 		return errors.New("user cannot be nil")
 	}
 
-	userID, err := uuid.Parse(user.UserId)
-	if err != nil {
-		return errors.New("invalid user ID format")
-	}
-
+	id := encoding.DecodeID(user.UserId)
 	userModel := &models.User{
-		ID:       userID,
+		ID:       id,
 		Username: user.Username,
 		IsActive: user.IsActive,
 	}
@@ -40,7 +35,7 @@ func (s *UserService) RegisterUser(ctx context.Context, user *dtos.User) error {
 	return s.userRepo.Create(ctx, userModel)
 }
 
-func (s *UserService) UnregisterUserByID(ctx context.Context, userID uuid.UUID) error {
+func (s *UserService) UnregisterUserByID(ctx context.Context, userID int64) error {
 	return s.userRepo.DeleteByID(ctx, userID)
 }
 
@@ -53,7 +48,7 @@ func (s *UserService) ListUsers(ctx context.Context) ([]*dtos.User, error) {
 	apiUsers := make([]*dtos.User, len(users))
 	for i, u := range users {
 		apiUsers[i] = &dtos.User{
-			UserId:   u.ID.String(),
+			UserId:   encoding.EncodeID(u.ID),
 			Username: u.Username,
 			IsActive: u.IsActive,
 		}
@@ -61,7 +56,7 @@ func (s *UserService) ListUsers(ctx context.Context) ([]*dtos.User, error) {
 	return apiUsers, nil
 }
 
-func (s *UserService) SetUserActive(ctx context.Context, userID uuid.UUID, active bool) (*dtos.User, error) {
+func (s *UserService) SetUserActive(ctx context.Context, userID int64, active bool) (*dtos.User, error) {
 	user, err := s.userRepo.FindByID(ctx, userID)
 	if err != nil {
 		return nil, err
@@ -73,7 +68,7 @@ func (s *UserService) SetUserActive(ctx context.Context, userID uuid.UUID, activ
 	}
 
 	return &dtos.User{
-		UserId:   user.ID.String(),
+		UserId:   encoding.EncodeID(user.ID),
 		Username: user.Username,
 		IsActive: user.IsActive,
 	}, nil

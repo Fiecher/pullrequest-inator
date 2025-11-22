@@ -1,10 +1,6 @@
 package models
 
-import (
-	"github.com/google/uuid"
-)
-
 type Status struct {
-	ID   uuid.UUID `db:"id"`
-	Name string    `db:"name"`
+	ID   int64  `db:"id"`
+	Name string `db:"name"`
 }

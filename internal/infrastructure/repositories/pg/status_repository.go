@@ -5,7 +5,6 @@ import (
 	"errors"
 	"pullrequest-inator/internal/infrastructure/models"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -25,7 +24,7 @@ const (
 	listStatusesQuery  = `SELECT id, name FROM pull_request_statuses ORDER BY name`
 )
 
-func (r *StatusRepository) FindByID(ctx context.Context, id uuid.UUID) (*models.Status, error) {
+func (r *StatusRepository) FindByID(ctx context.Context, id int64) (*models.Status, error) {
 	var s models.Status
 	if err := r.db.QueryRow(ctx, getStatusByIDQuery, id).Scan(&s.ID, &s.Name); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

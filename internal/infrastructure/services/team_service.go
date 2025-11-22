@@ -5,10 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"pullrequest-inator/internal/api/dtos"
+	"pullrequest-inator/internal/infrastructure/encoding"
 	"pullrequest-inator/internal/infrastructure/repositories/interfaces"
 	"pullrequest-inator/internal/infrastructure/repositories/pg"
-
-	"github.com/google/uuid"
 )
 
 var (
@@ -64,7 +63,7 @@ func (s *TeamService) GetTeamByName(ctx context.Context, teamName string) (*dtos
 		}
 
 		members = append(members, dtos.TeamMember{
-			UserId:   user.ID.String(),
+			UserId:   encoding.EncodeID(user.ID),
 			Username: user.Username,
 			IsActive: user.IsActive,
 		})
@@ -76,7 +75,7 @@ func (s *TeamService) GetTeamByName(ctx context.Context, teamName string) (*dtos
 	}, nil
 }
 
-func (s *TeamService) SetUserActiveByID(ctx context.Context, userID uuid.UUID, active bool) (*dtos.User, error) {
+func (s *TeamService) SetUserActiveByID(ctx context.Context, userID int64, active bool) (*dtos.User, error) {
 	user, err := s.userRepo.FindByID(ctx, userID)
 	if errors.Is(err, pg.ErrUserNotFound) {
 		return nil, ErrNotFound
@@ -100,7 +99,7 @@ func (s *TeamService) SetUserActiveByID(ctx context.Context, userID uuid.UUID, a
 	}
 
 	return &dtos.User{
-		UserId:   user.ID.String(),
+		UserId:   encoding.EncodeID(user.ID),
 		Username: user.Username,
 		IsActive: user.IsActive,
 		TeamName: teamName,

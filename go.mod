@@ -5,8 +5,8 @@ go 1.24.0
 toolchain go1.24.10
 
 require (
-	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.7.6
+	github.com/jxskiss/base62 v1.1.0
 	github.com/labstack/echo/v4 v4.13.4
 	github.com/oapi-codegen/runtime v1.1.2
 )
@@ -16,8 +16,8 @@ require (
 	github.com/dprotaso/go-yit v0.0.0-20251117151522-da16f3077589 // indirect
 	github.com/getkin/kin-openapi v0.133.0 // indirect
 	github.com/go-openapi/jsonpointer v0.22.3 // indirect
-	github.com/go-openapi/swag v0.25.3 // indirect
 	github.com/go-openapi/swag/jsonname v0.25.3 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect

@@ -7,8 +7,7 @@ import (
 func ToAPITeam(d dtos.Team) Team {
 	members := make([]TeamMember, len(d.Members))
 	for i, m := range d.Members {
-		member := ToAPITeamMember(m)
-		members[i] = member
+		members[i] = ToAPITeamMember(m)
 	}
 
 	return Team{
@@ -28,8 +27,7 @@ func ToAPITeamMember(m dtos.TeamMember) TeamMember {
 func FromAPITeam(t Team) dtos.Team {
 	members := make([]dtos.TeamMember, len(t.Members))
 	for i, m := range t.Members {
-		member := FromAPITeamMember(m)
-		members[i] = member
+		members[i] = FromAPITeamMember(m)
 	}
 
 	return dtos.Team{
@@ -56,14 +54,12 @@ func ToAPIUser(u dtos.User) User {
 }
 
 func ToAPIPullRequest(d dtos.PullRequest) PullRequest {
-	reviewers := make([]string, len(d.AssignedReviewers))
-
 	return PullRequest{
 		PullRequestId:     d.PullRequestId,
 		PullRequestName:   d.PullRequestName,
 		AuthorId:          d.AuthorId,
 		Status:            PullRequestStatus(d.Status),
-		AssignedReviewers: reviewers,
+		AssignedReviewers: d.AssignedReviewers,
 		CreatedAt:         d.CreatedAt,
 		MergedAt:          d.MergedAt,
 	}

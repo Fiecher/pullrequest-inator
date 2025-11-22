@@ -7,7 +7,6 @@ import (
 	"pullrequest-inator/internal/infrastructure/models"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -98,7 +97,7 @@ func (r *PullRequestRepository) Create(ctx context.Context, pr *models.PullReque
 	return nil
 }
 
-func (r *PullRequestRepository) FindByID(ctx context.Context, id uuid.UUID) (*models.PullRequest, error) {
+func (r *PullRequestRepository) FindByID(ctx context.Context, id int64) (*models.PullRequest, error) {
 	var pr models.PullRequest
 
 	err := r.db.QueryRow(
@@ -195,7 +194,7 @@ func (r *PullRequestRepository) Update(ctx context.Context, pr *models.PullReque
 	return nil
 }
 
-func (r *PullRequestRepository) DeleteByID(ctx context.Context, id uuid.UUID) error {
+func (r *PullRequestRepository) DeleteByID(ctx context.Context, id int64) error {
 	cmd, err := r.db.Exec(ctx, deletePullRequestQuery, id)
 	if err != nil {
 		return fmt.Errorf("delete pull request %s: %w", id, err)
@@ -208,7 +207,7 @@ func (r *PullRequestRepository) DeleteByID(ctx context.Context, id uuid.UUID) er
 	return nil
 }
 
-func (r *PullRequestRepository) FindByReviewer(ctx context.Context, userID uuid.UUID) ([]*models.PullRequest, error) {
+func (r *PullRequestRepository) FindByReviewer(ctx context.Context, userID int64) ([]*models.PullRequest, error) {
 	rows, err := r.db.Query(ctx, selectByReviewerQuery, userID)
 	if err != nil {
 		return nil, fmt.Errorf("get pull requests by user %s: %w", userID, err)
@@ -239,17 +238,17 @@ func (r *PullRequestRepository) FindByReviewer(ctx context.Context, userID uuid.
 	return list, nil
 }
 
-func (r *PullRequestRepository) getReviewers(ctx context.Context, prID uuid.UUID) ([]uuid.UUID, error) {
+func (r *PullRequestRepository) getReviewers(ctx context.Context, prID int64) ([]int64, error) {
 	rows, err := r.db.Query(ctx, selectReviewersQuery, prID)
 	if err != nil {
 		return nil, fmt.Errorf("get reviewers for PR %s: %w", prID, err)
 	}
 	defer rows.Close()
 
-	var reviewers []uuid.UUID
+	var reviewers []int64
 
 	for rows.Next() {
-		var id uuid.UUID
+		var id int64
 		if err := rows.Scan(&id); err != nil {
 			return nil, fmt.Errorf("scan reviewer ID for PR %s: %w", prID, err)
 		}
@@ -263,7 +262,7 @@ func (r *PullRequestRepository) getReviewers(ctx context.Context, prID uuid.UUID
 	return reviewers, nil
 }
 
-func (r *PullRequestRepository) insertReviewersTx(ctx context.Context, tx pgx.Tx, prID uuid.UUID, reviewers []uuid.UUID) error {
+func (r *PullRequestRepository) insertReviewersTx(ctx context.Context, tx pgx.Tx, prID int64, reviewers []int64) error {
 	for _, reviewer := range reviewers {
 		_, err := tx.Exec(ctx, insertReviewerQuery, prID, reviewer, time.Now())
 		if err != nil {

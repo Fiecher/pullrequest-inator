@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"pullrequest-inator/internal/infrastructure/models"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -38,7 +37,7 @@ func (r *UserRepository) Create(ctx context.Context, user *models.User) error {
 	return nil
 }
 
-func (r *UserRepository) FindByID(ctx context.Context, id uuid.UUID) (*models.User, error) {
+func (r *UserRepository) FindByID(ctx context.Context, id int64) (*models.User, error) {
 	u := models.User{}
 
 	err := r.db.QueryRow(ctx, selectUserByIDQuery, id).
@@ -97,7 +96,7 @@ func (r *UserRepository) Update(ctx context.Context, user *models.User) error {
 	return nil
 }
 
-func (r *UserRepository) DeleteByID(ctx context.Context, id uuid.UUID) error {
+func (r *UserRepository) DeleteByID(ctx context.Context, id int64) error {
 	cmd, err := r.db.Exec(ctx, deleteUserQuery, id)
 	if err != nil {
 		return fmt.Errorf("delete user %s: %w", id, err)

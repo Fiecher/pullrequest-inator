@@ -2,12 +2,11 @@ package api
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"pullrequest-inator/internal/api/dtos"
+	"pullrequest-inator/internal/infrastructure/encoding"
 	"pullrequest-inator/internal/infrastructure/services"
 
-	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )
 
@@ -63,11 +62,7 @@ func (s *Server) PostPullRequestMerge(ctx echo.Context) error {
 		return err
 	}
 
-	prID, err := uuid.Parse(input.PullRequestId)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "invalid pull_request_id")
-	}
-
+	prID := encoding.DecodeID(input.PullRequestId)
 	pr, err := s.prService.MarkAsMerged(ctx.Request().Context(), prID)
 	if err != nil {
 		return mapAppErrorToEchoResponse(ctx, err)
@@ -84,16 +79,8 @@ func (s *Server) PostPullRequestReassign(ctx echo.Context) error {
 		return err
 	}
 
-	prID, err := uuid.Parse(input.PullRequestId)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "invalid pull_request_id")
-	}
-
-	oldID, err := uuid.Parse(input.OldUserId)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "invalid old_user_id")
-	}
-
+	prID := encoding.DecodeID(input.PullRequestId)
+	oldID := encoding.DecodeID(input.OldUserId)
 	resp, err := s.prService.ReassignReviewer(ctx.Request().Context(), oldID, prID)
 	if err != nil {
 		return mapAppErrorToEchoResponse(ctx, err)
@@ -139,11 +126,7 @@ func (s *Server) PostUsersSetIsActive(ctx echo.Context) error {
 		return err
 	}
 
-	userID, err := uuid.Parse(input.UserId)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "invalid user id")
-	}
-
+	userID := encoding.DecodeID(input.UserId)
 	updated, err := s.teamService.SetUserActiveByID(ctx.Request().Context(), userID, input.IsActive)
 	if err != nil {
 		return mapAppErrorToEchoResponse(ctx, err)
@@ -155,11 +138,7 @@ func (s *Server) PostUsersSetIsActive(ctx echo.Context) error {
 }
 
 func (s *Server) GetUsersGetReview(ctx echo.Context, params GetUsersGetReviewParams) error {
-	userID, err := uuid.Parse(params.UserId)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "invalid user id")
-	}
-
+	userID := encoding.DecodeID(params.UserId)
 	resp, err := s.prService.FindPullRequestsByReviewer(ctx.Request().Context(), userID)
 	if err != nil {
 		return mapAppErrorToEchoResponse(ctx, err)
@@ -210,8 +189,6 @@ func mapAppErrorToEchoResponse(ctx echo.Context, err error) error {
 	}
 
 	return ctx.JSON(http.StatusInternalServerError, map[string]any{
-		"error":          "internal server error",
-		"original_error": err.Error(),
-		"error_type":     fmt.Sprintf("%T", err),
+		"error": "internal server error",
 	})
 }
