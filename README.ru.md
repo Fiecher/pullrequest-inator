@@ -1,5 +1,7 @@
 # pullrequest-inator
 
+- [README EN ver](https://github.com/Fiecher/pullrequest-inator/blob/main/README.en.md)
+
 Микросервис, автоматически назначающий ревьюеров на Pull Request’ы (PR).
 Позволяет управлять командами и участниками. 
 Взаимодействие происходит исключительно через HTTP API.
