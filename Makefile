@@ -1,4 +1,4 @@
-.PHONY: all run stop deps lint test test-e2e generate migrate-create migrate-up migrate-down coverage help
+.PHONY: all run stop deps lint test test-e2e generate migrate-create migrate-up migrate-down coverage install-tools help
 
 APP_NAME = pullrequest-inator
 DB_URL = postgres://postgres:password@localhost:5432/pullrequest?sslmode=disable
@@ -7,7 +7,6 @@ DOCKER_COMPOSE = docker-compose
 
 
 all: deps lint build
-
 
 run:
 	$(DOCKER_COMPOSE) up --build -d
@@ -19,18 +18,23 @@ stop:
 logs:
 	$(DOCKER_COMPOSE) logs -f $(APP_NAME)
 
-deps:
+install-tools:
+	@echo "Installing development tools (oapi-codegen, golangci-lint)..."
+	go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@latest
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+
+deps: install-tools
 	go mod tidy
 	go mod verify
-
-lint:
-	golangci-lint run ./...
 
 fmt:
 	go fmt ./...
 
+lint:
+	golangci-lint run ./...
+
 generate:
-	oapi-codegen -package api -generate types,server,spec -o internal/api/codegen_api.go openapi.yaml
+	oapi-codegen -package api -generate types,server,spec -o internal/api/codegen_api.go api/openapi.yml
 	@echo "API code generated."
 
 migrate-create:
@@ -45,6 +49,7 @@ migrate-down:
 
 test-e2e:
 	go test -v ./test/e2e
+
 
 help:
 	@echo "Available commands:"

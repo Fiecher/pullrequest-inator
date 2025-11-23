@@ -12,4 +12,5 @@ type PullRequest interface {
 	MarkAsMerged(ctx context.Context, prID int64) (*dtos.PullRequest, error)
 	GetUserReviews(ctx context.Context, userID int64) (*dtos.UserGetReviewResponse, error)
 	CreateWithReviewers(ctx context.Context, prID int64, prName string, authorID int64) (*dtos.PullRequest, error)
+	GetStatistics(ctx context.Context) (*dtos.StatsResponse, error)
 }

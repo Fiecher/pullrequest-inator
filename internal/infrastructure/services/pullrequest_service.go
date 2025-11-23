@@ -285,6 +285,54 @@ func (s *PullRequestService) CreatePullRequest(ctx context.Context, req *dtos.Pu
 	return s.CreateWithReviewers(ctx, prID, req.PullRequestName, authorID)
 }
 
+func (s *PullRequestService) GetStatistics(ctx context.Context) (*dtos.StatsResponse, error) {
+	statusCounts, err := s.prRepo.GetPRStatusCounts(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("get pr status stats: %w", err)
+	}
+
+	total := 0
+	for _, count := range statusCounts {
+		total += count
+	}
+
+	reviewerCounts, err := s.prRepo.GetReviewerStats(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("get reviewer stats: %w", err)
+	}
+
+	allUsers, err := s.userRepo.FindAll(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("get users for stats: %w", err)
+	}
+
+	userMap := make(map[int64]*models.User)
+	for _, u := range allUsers {
+		userMap[u.ID] = u
+	}
+
+	var reviewerStats []dtos.ReviewerStats
+	for userID, count := range reviewerCounts {
+		username := "Unknown"
+		if u, ok := userMap[userID]; ok {
+			username = u.Username
+		}
+
+		reviewerStats = append(reviewerStats, dtos.ReviewerStats{
+			ReviewerID:    encoding.EncodeID(userID),
+			Username:      username,
+			AssignedCount: count,
+		})
+	}
+
+	return &dtos.StatsResponse{
+		TotalPullRequests:  total,
+		OpenPullRequests:   statusCounts["OPEN"],
+		MergedPullRequests: statusCounts["MERGED"],
+		ReviewerStats:      reviewerStats,
+	}, nil
+}
+
 func (s *PullRequestService) getOpenStatus(ctx context.Context) (*models.Status, error) {
 	statuses, err := s.statusRepo.FindAll(ctx)
 	if err != nil {

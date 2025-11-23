@@ -4,10 +4,17 @@
 package api
 
 import (
+	"bytes"
+	"compress/gzip"
+	"encoding/base64"
 	"fmt"
 	"net/http"
+	"net/url"
+	"path"
+	"strings"
 	"time"
 
+	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/labstack/echo/v4"
 	"github.com/oapi-codegen/runtime"
 )
@@ -70,6 +77,21 @@ type PullRequestShort struct {
 
 // PullRequestShortStatus defines model for PullRequestShort.Status.
 type PullRequestShortStatus string
+
+// ReviewerStats defines model for ReviewerStats.
+type ReviewerStats struct {
+	AssignedCount int    `json:"assigned_count"`
+	ReviewerId    string `json:"reviewer_id"`
+	Username      string `json:"username"`
+}
+
+// StatsResponse defines model for StatsResponse.
+type StatsResponse struct {
+	MergedPullRequests int             `json:"merged_pull_requests"`
+	OpenPullRequests   int             `json:"open_pull_requests"`
+	ReviewerStats      []ReviewerStats `json:"reviewer_stats"`
+	TotalPullRequests  int             `json:"total_pull_requests"`
+}
 
 // Team defines model for Team.
 type Team struct {
@@ -163,6 +185,9 @@ type ServerInterface interface {
 	// Переназначить конкретного ревьювера на другого из его команды
 	// (POST /pullRequest/reassign)
 	PostPullRequestReassign(ctx echo.Context) error
+	// Получить общую статистику по PR и нагрузке ревьюверов
+	// (GET /stats)
+	GetStats(ctx echo.Context) error
 	// Создать команду с участниками (создаёт/обновляет пользователей)
 	// (POST /team/add)
 	PostTeamAdd(ctx echo.Context) error
@@ -215,6 +240,15 @@ func (w *ServerInterfaceWrapper) PostPullRequestReassign(ctx echo.Context) error
 
 	// Invoke the callback with all the unmarshaled arguments
 	err = w.Handler.PostPullRequestReassign(ctx)
+	return err
+}
+
+// GetStats converts echo context to params.
+func (w *ServerInterfaceWrapper) GetStats(ctx echo.Context) error {
+	var err error
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.GetStats(ctx)
 	return err
 }
 
@@ -304,9 +338,128 @@ func RegisterHandlersWithBaseURL(router EchoRouter, si ServerInterface, baseURL 
 	router.POST(baseURL+"/pullRequest/create", wrapper.PostPullRequestCreate)
 	router.POST(baseURL+"/pullRequest/merge", wrapper.PostPullRequestMerge)
 	router.POST(baseURL+"/pullRequest/reassign", wrapper.PostPullRequestReassign)
+	router.GET(baseURL+"/stats", wrapper.GetStats)
 	router.POST(baseURL+"/team/add", wrapper.PostTeamAdd)
 	router.GET(baseURL+"/team/get", wrapper.GetTeamGet)
 	router.GET(baseURL+"/users/getReview", wrapper.GetUsersGetReview)
 	router.POST(baseURL+"/users/setIsActive", wrapper.PostUsersSetIsActive)
 
+}
+
+// Base64 encoded, gzipped, json marshaled Swagger object
+var swaggerSpec = []string{
+
+	"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",
+	"KJXaq+3/BQAA//9EswtjbCsAAA==",
+}
+
+// GetSwagger returns the content of the embedded swagger specification file
+// or error if failed to decode
+func decodeSpec() ([]byte, error) {
+	zipped, err := base64.StdEncoding.DecodeString(strings.Join(swaggerSpec, ""))
+	if err != nil {
+		return nil, fmt.Errorf("error base64 decoding spec: %w", err)
+	}
+	zr, err := gzip.NewReader(bytes.NewReader(zipped))
+	if err != nil {
+		return nil, fmt.Errorf("error decompressing spec: %w", err)
+	}
+	var buf bytes.Buffer
+	_, err = buf.ReadFrom(zr)
+	if err != nil {
+		return nil, fmt.Errorf("error decompressing spec: %w", err)
+	}
+
+	return buf.Bytes(), nil
+}
+
+var rawSpec = decodeSpecCached()
+
+// a naive cached of a decoded swagger spec
+func decodeSpecCached() func() ([]byte, error) {
+	data, err := decodeSpec()
+	return func() ([]byte, error) {
+		return data, err
+	}
+}
+
+// Constructs a synthetic filesystem for resolving external references when loading openapi specifications.
+func PathToRawSpec(pathToFile string) map[string]func() ([]byte, error) {
+	res := make(map[string]func() ([]byte, error))
+	if len(pathToFile) > 0 {
+		res[pathToFile] = rawSpec
+	}
+
+	return res
+}
+
+// GetSwagger returns the Swagger specification corresponding to the generated code
+// in this file. The external references of Swagger specification are resolved.
+// The logic of resolving external references is tightly connected to "import-mapping" feature.
+// Externally referenced files must be embedded in the corresponding golang packages.
+// Urls can be supported but this task was out of the scope.
+func GetSwagger() (swagger *openapi3.T, err error) {
+	resolvePath := PathToRawSpec("")
+
+	loader := openapi3.NewLoader()
+	loader.IsExternalRefsAllowed = true
+	loader.ReadFromURIFunc = func(loader *openapi3.Loader, url *url.URL) ([]byte, error) {
+		pathToFile := url.String()
+		pathToFile = path.Clean(pathToFile)
+		getSpec, ok := resolvePath[pathToFile]
+		if !ok {
+			err1 := fmt.Errorf("path not found: %s", pathToFile)
+			return nil, err1
+		}
+		return getSpec()
+	}
+	var specData []byte
+	specData, err = rawSpec()
+	if err != nil {
+		return
+	}
+	swagger, err = loader.LoadFromData(specData)
+	if err != nil {
+		return
+	}
+	return
 }

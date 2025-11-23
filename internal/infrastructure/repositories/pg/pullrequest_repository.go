@@ -64,6 +64,18 @@ const (
 		SELECT reviewer_id FROM pull_request_reviewers
 		WHERE pull_request_id = $1;
 	`
+	countPRsByStatusQuery = `
+		SELECT s.name, COUNT(*) 
+		FROM pull_requests pr
+		JOIN pull_request_statuses s ON pr.status_id = s.id
+		GROUP BY s.name;
+	`
+	countReviewerAssignmentsQuery = `
+		SELECT reviewer_id, COUNT(*) as count
+		FROM pull_request_reviewers
+		GROUP BY reviewer_id
+		ORDER BY count DESC;
+	`
 )
 
 func (r *PullRequestRepository) Create(ctx context.Context, pr *models.PullRequest) error {
@@ -241,6 +253,44 @@ func (r *PullRequestRepository) FindByReviewer(ctx context.Context, userID int64
 	}
 
 	return list, nil
+}
+
+func (r *PullRequestRepository) GetPRStatusCounts(ctx context.Context) (map[string]int, error) {
+	rows, err := r.db.Query(ctx, countPRsByStatusQuery)
+	if err != nil {
+		return nil, fmt.Errorf("count prs by status: %w", err)
+	}
+	defer rows.Close()
+
+	stats := make(map[string]int)
+	for rows.Next() {
+		var status string
+		var count int
+		if err := rows.Scan(&status, &count); err != nil {
+			return nil, err
+		}
+		stats[status] = count
+	}
+	return stats, nil
+}
+
+func (r *PullRequestRepository) GetReviewerStats(ctx context.Context) (map[int64]int, error) {
+	rows, err := r.db.Query(ctx, countReviewerAssignmentsQuery)
+	if err != nil {
+		return nil, fmt.Errorf("count reviewer assignments: %w", err)
+	}
+	defer rows.Close()
+
+	stats := make(map[int64]int)
+	for rows.Next() {
+		var reviewerID int64
+		var count int
+		if err := rows.Scan(&reviewerID, &count); err != nil {
+			return nil, err
+		}
+		stats[reviewerID] = count
+	}
+	return stats, nil
 }
 
 func (r *PullRequestRepository) getReviewers(ctx context.Context, prID int64) ([]int64, error) {

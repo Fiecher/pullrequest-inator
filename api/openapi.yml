@@ -8,6 +8,7 @@ tags:
   - name: Users
   - name: PullRequests
   - name: Health
+  - name: Statistics
 
 components:
   parameters:
@@ -120,6 +121,30 @@ components:
         status:
           type: string
           enum: [OPEN, MERGED]
+    ReviewerStats:
+      type: object
+      required: [ reviewer_id, username, assigned_count ]
+      properties:
+        reviewer_id:
+          type: string
+        username:
+          type: string
+        assigned_count:
+          type: integer
+    StatsResponse:
+      type: object
+      required: [ total_pull_requests, open_pull_requests, merged_pull_requests, reviewer_stats ]
+      properties:
+        total_pull_requests:
+          type: integer
+        open_pull_requests:
+          type: integer
+        merged_pull_requests:
+          type: integer
+        reviewer_stats:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReviewerStats'
 
 paths:
   /team/add:
@@ -419,6 +444,23 @@ paths:
                     pull_request_name: Add search
                     author_id: u1
                     status: OPEN
+
+  /stats:
+    get:
+      tags: [Statistics]
+      summary: Получить общую статистику по PR и нагрузке ревьюверов
+      responses:
+        '200':
+          description: Статистика успешно получена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatsResponse'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
 
   /health:
     get:

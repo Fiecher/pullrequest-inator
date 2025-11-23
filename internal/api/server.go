@@ -203,6 +203,15 @@ func (s *Server) GetHealth(ctx echo.Context) error {
 	})
 }
 
+func (s *Server) GetStats(ctx echo.Context) error {
+	stats, err := s.prService.GetStatistics(ctx.Request().Context())
+	if err != nil {
+		return mapAppErrorToEchoResponse(ctx, err)
+	}
+
+	return ctx.JSON(http.StatusOK, stats)
+}
+
 func mapAppErrorToEchoResponse(ctx echo.Context, err error) error {
 	code := http.StatusInternalServerError
 	msg := "internal server error"

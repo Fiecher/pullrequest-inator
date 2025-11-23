@@ -45,15 +45,16 @@ make test-e2e
 
 Список команд [Makefile](https://github.com/Fiecher/pullrequest-inator/blob/main/Makefile):
 
-| Команда              | Категория | Описание                                                        |
-|----------------------|-----------|-----------------------------------------------------------------|
-| `make run`           | Docker    | Запускает приложение и БД через Docker Compose.                 |
-| `make stop`          | Docker    | Останавливает и удаляет контейнеры.                             |
-| `make test-e2e`      | Testing   | Запускает E2E-тесты (`./test/e2e`).                             |
-| `make generate`      | CodeGen   | Генерирует Go-код на основе `openapi.yaml`.                     |
-| `make fmt`           | Linter    | Форматирует весь код проекта (`go fmt`).                        |
-| `make lint`          | Linter    | Запускает линтер (`golangci-lint`) для проверки стиля и ошибок. |
-| `make deps`          | Tools     | Обновляет зависимости (`go mod tidy`, `go mod verify`).         |
-| `make migrate-create`| Database  | Создает новый пустой файл миграции.                             |
-| `make migrate-up`    | Database  | Применяет все незавершенные миграции к локальной БД.            |
-| `make migrate-down`  | Database  | Откатывает последнюю миграцию на один шаг назад.                |
+| Команда                       | Категория | Описание                                                        |
+|-------------------------------|-----------|-----------------------------------------------------------------|
+| `make run`                    | Docker    | Запускает приложение и БД через Docker Compose.                 |
+| `make stop`                   | Docker    | Останавливает и удаляет контейнеры.                             |
+| `make test-e2e`               | Testing   | Запускает E2E-тесты (`./test/e2e`).                             |
+| `make generate`               | CodeGen   | Генерирует Go-код на основе `openapi.yaml`.                     |
+| `make fmt`                    | Linter    | Форматирует весь код проекта (`go fmt`).                        |
+| `make lint`                   | Linter    | Запускает линтер (`golangci-lint`) для проверки стиля и ошибок. |
+| `make deps`                   | Tools     | Обновляет зависимости (`go mod tidy`, `go mod verify`).         |
+| `make install-tools`          | Tools     | Установка `oapi-codegen`, `golangci-lint`....                    |
+| `make migrate-create`         | Database  | Создает новый пустой файл миграции.                             |
+| `make migrate-up`             | Database  | Применяет все незавершенные миграции к локальной БД.            |
+| `make migrate-down`           | Database  | Откатывает последнюю миграцию на один шаг назад.                |
