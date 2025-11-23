@@ -47,7 +47,7 @@ func (r *UserRepository) FindByID(ctx context.Context, id int64) (*models.User, 
 		return nil, ErrUserNotFound
 	}
 	if err != nil {
-		return nil, fmt.Errorf("find user by id %s: %w", id, err)
+		return nil, fmt.Errorf("find user by id %d: %w", id, err)
 	}
 
 	return &u, nil
@@ -90,7 +90,7 @@ func (r *UserRepository) Update(ctx context.Context, user *models.User) error {
 		return ErrUserNotFound
 	}
 	if err != nil {
-		return fmt.Errorf("update user %s: %w", user.ID, err)
+		return fmt.Errorf("update user %d: %w", user.ID, err)
 	}
 
 	return nil
@@ -99,7 +99,7 @@ func (r *UserRepository) Update(ctx context.Context, user *models.User) error {
 func (r *UserRepository) DeleteByID(ctx context.Context, id int64) error {
 	cmd, err := r.db.Exec(ctx, deleteUserQuery, id)
 	if err != nil {
-		return fmt.Errorf("delete user %s: %w", id, err)
+		return fmt.Errorf("delete user %d: %w", id, err)
 	}
 
 	if cmd.RowsAffected() == 0 {

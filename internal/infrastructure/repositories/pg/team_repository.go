@@ -229,7 +229,7 @@ func (r *TeamRepository) CreateWithUsers(ctx context.Context, teamReq *dtos.Team
 	for _, member := range teamReq.Members {
 		id := encoding.DecodeID(member.UserId)
 		if _, err := tx.Exec(ctx, insertTeamUserQuery, teamID, id); err != nil {
-			return fmt.Errorf("link user %s to team: %w", id, err)
+			return fmt.Errorf("link user %d to team: %w", id, err)
 		}
 	}
 

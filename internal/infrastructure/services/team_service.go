@@ -59,7 +59,7 @@ func (s *TeamService) GetTeamByName(ctx context.Context, teamName string) (*dtos
 			return nil, ErrFalseUserInTeam
 		}
 		if err != nil {
-			return nil, fmt.Errorf("find user %s: %w", userID, err)
+			return nil, fmt.Errorf("find user %d: %w", userID, err)
 		}
 
 		members = append(members, dtos.TeamMember{

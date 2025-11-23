@@ -64,18 +64,18 @@ func (s *PullRequestService) CreateWithReviewers(ctx context.Context, prID int64
 	}
 
 	var activeUsers []int64
-	for _, uid := range team.UserIDs {
-		if uid == authorID {
+	for _, id := range team.UserIDs {
+		if id == authorID {
 			continue
 		}
-		u, err := s.userRepo.FindByID(ctx, uid)
+		u, err := s.userRepo.FindByID(ctx, id)
 		if errors.Is(err, pg.ErrUserNotFound) {
 			continue
 		} else if err != nil {
-			return nil, fmt.Errorf("find user %s: %w", uid, err)
+			return nil, fmt.Errorf("find user %d: %w", id, err)
 		}
 		if u.IsActive {
-			activeUsers = append(activeUsers, uid)
+			activeUsers = append(activeUsers, id)
 		}
 	}
 
@@ -141,18 +141,18 @@ func (s *PullRequestService) ReassignReviewer(ctx context.Context, userID int64,
 	}
 
 	var candidates []int64
-	for _, uid := range team.UserIDs {
-		if uid == pr.AuthorID || contains(pr.ReviewersIDs, uid) {
+	for _, id := range team.UserIDs {
+		if id == pr.AuthorID || contains(pr.ReviewersIDs, id) {
 			continue
 		}
-		u, err := s.userRepo.FindByID(ctx, uid)
+		u, err := s.userRepo.FindByID(ctx, id)
 		if errors.Is(err, pg.ErrUserNotFound) {
 			continue
 		} else if err != nil {
-			return nil, fmt.Errorf("find user %s: %w", uid, err)
+			return nil, fmt.Errorf("find user %d: %w", id, err)
 		}
 		if u.IsActive {
-			candidates = append(candidates, uid)
+			candidates = append(candidates, id)
 		}
 	}
 
@@ -192,7 +192,7 @@ func (s *PullRequestService) FindPullRequestsByReviewer(ctx context.Context, use
 	for _, pr := range prs {
 		status, err := s.statusRepo.FindByID(ctx, pr.StatusID)
 		if err != nil && !errors.Is(err, pg.ErrStatusNotFound) {
-			return nil, fmt.Errorf("find pull request status %s: %w", pr.StatusID, err)
+			return nil, fmt.Errorf("find pull request status %d: %w", pr.StatusID, err)
 		}
 		dto := dtos.ModelToPullRequestDTO(pr, status.Name)
 		dts = append(dts, dto)

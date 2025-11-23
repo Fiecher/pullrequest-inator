@@ -112,12 +112,12 @@ func (r *PullRequestRepository) FindByID(ctx context.Context, id int64) (*models
 		return nil, ErrPullRequestNotFound
 	}
 	if err != nil {
-		return nil, fmt.Errorf("find pull request by id %s: %w", id, err)
+		return nil, fmt.Errorf("find pull request by id %d: %w", id, err)
 	}
 
 	reviewers, err := r.getReviewers(ctx, pr.ID)
 	if err != nil {
-		return nil, fmt.Errorf("get reviewers for PR %s: %w", pr.ID, err)
+		return nil, fmt.Errorf("get reviewers for PR %d: %w", pr.ID, err)
 	}
 	pr.ReviewersIDs = reviewers
 
@@ -141,7 +141,7 @@ func (r *PullRequestRepository) FindAll(ctx context.Context) ([]*models.PullRequ
 
 		reviewers, err := r.getReviewers(ctx, pr.ID)
 		if err != nil {
-			return nil, fmt.Errorf("get reviewers for PR %s: %w", pr.ID, err)
+			return nil, fmt.Errorf("get reviewers for PR %d: %w", pr.ID, err)
 		}
 		pr.ReviewersIDs = reviewers
 
@@ -178,16 +178,16 @@ func (r *PullRequestRepository) Update(ctx context.Context, pr *models.PullReque
 		return ErrPullRequestNotFound
 	}
 	if err != nil {
-		return fmt.Errorf("update pull request %s: %w", pr.ID, err)
+		return fmt.Errorf("update pull request %d: %w", pr.ID, err)
 	}
 
 	if _, err := tx.Exec(ctx, deleteReviewersQuery, pr.ID); err != nil {
-		return fmt.Errorf("clear reviewers for PR %s: %w", pr.ID, err)
+		return fmt.Errorf("clear reviewers for PR %d: %w", pr.ID, err)
 	}
 
 	if len(pr.ReviewersIDs) > 0 {
 		if err := r.insertReviewersTx(ctx, tx, pr.ID, pr.ReviewersIDs); err != nil {
-			return fmt.Errorf("re-insert reviewers for PR %s: %w", pr.ID, err)
+			return fmt.Errorf("re-insert reviewers for PR %d: %w", pr.ID, err)
 		}
 	}
 
@@ -201,7 +201,7 @@ func (r *PullRequestRepository) Update(ctx context.Context, pr *models.PullReque
 func (r *PullRequestRepository) DeleteByID(ctx context.Context, id int64) error {
 	cmd, err := r.db.Exec(ctx, deletePullRequestQuery, id)
 	if err != nil {
-		return fmt.Errorf("delete pull request %s: %w", id, err)
+		return fmt.Errorf("delete pull request %d: %w", id, err)
 	}
 
 	if cmd.RowsAffected() == 0 {
@@ -214,7 +214,7 @@ func (r *PullRequestRepository) DeleteByID(ctx context.Context, id int64) error 
 func (r *PullRequestRepository) FindByReviewer(ctx context.Context, userID int64) ([]*models.PullRequest, error) {
 	rows, err := r.db.Query(ctx, selectByReviewerQuery, userID)
 	if err != nil {
-		return nil, fmt.Errorf("get pull requests by user %s: %w", userID, err)
+		return nil, fmt.Errorf("get pull requests by user %d: %w", userID, err)
 	}
 	defer rows.Close()
 
@@ -228,7 +228,7 @@ func (r *PullRequestRepository) FindByReviewer(ctx context.Context, userID int64
 
 		reviewers, err := r.getReviewers(ctx, pr.ID)
 		if err != nil {
-			return nil, fmt.Errorf("get reviewers for PR %s: %w", pr.ID, err)
+			return nil, fmt.Errorf("get reviewers for PR %d: %w", pr.ID, err)
 		}
 		pr.ReviewersIDs = reviewers
 
@@ -236,7 +236,7 @@ func (r *PullRequestRepository) FindByReviewer(ctx context.Context, userID int64
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterating over pull request rows for user %s: %w", userID, err)
+		return nil, fmt.Errorf("iterating over pull request rows for user %d: %w", userID, err)
 	}
 
 	return list, nil
@@ -245,7 +245,7 @@ func (r *PullRequestRepository) FindByReviewer(ctx context.Context, userID int64
 func (r *PullRequestRepository) getReviewers(ctx context.Context, prID int64) ([]int64, error) {
 	rows, err := r.db.Query(ctx, selectReviewersQuery, prID)
 	if err != nil {
-		return nil, fmt.Errorf("get reviewers for PR %s: %w", prID, err)
+		return nil, fmt.Errorf("get reviewers for PR %d: %w", prID, err)
 	}
 	defer rows.Close()
 
@@ -254,13 +254,13 @@ func (r *PullRequestRepository) getReviewers(ctx context.Context, prID int64) ([
 	for rows.Next() {
 		var id int64
 		if err := rows.Scan(&id); err != nil {
-			return nil, fmt.Errorf("scan reviewer ID for PR %s: %w", prID, err)
+			return nil, fmt.Errorf("scan reviewer ID for PR %d: %w", prID, err)
 		}
 		reviewers = append(reviewers, id)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterating over reviewer rows for PR %s: %w", prID, err)
+		return nil, fmt.Errorf("iterating over reviewer rows for PR %d: %w", prID, err)
 	}
 
 	return reviewers, nil
@@ -270,7 +270,7 @@ func (r *PullRequestRepository) insertReviewersTx(ctx context.Context, tx pgx.Tx
 	for _, reviewer := range reviewers {
 		_, err := tx.Exec(ctx, insertReviewerQuery, prID, reviewer, time.Now())
 		if err != nil {
-			return fmt.Errorf("insert reviewer %s for PR %s: %w", reviewer, prID, err)
+			return fmt.Errorf("insert reviewer %d for PR %d: %w", reviewer, prID, err)
 		}
 	}
 	return nil
