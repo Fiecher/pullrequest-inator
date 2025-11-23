@@ -1,0 +1,62 @@
+version: "3.9"
+
+services:
+  pullrequest-inator-test:
+    build:
+      context: ../../
+    ports:
+      - "18080:8080"
+    environment:
+      DATABASE_URL: "postgres://postgres:password@db:5432/pullrequest_test?sslmode=disable"
+      DATABASE_HOST: db
+      DATABASE_PORT: 5432
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: password
+      DATABASE_NAME: pullrequest_test
+      SERVER_PORT: 8080
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - pullrequest-inator-test
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: pullrequest_test
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-d", "pullrequest_test"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - pullrequest-inator-test
+
+  migrate:
+    image: migrate/migrate:latest
+    command: [
+      "-path", "/migrations/pg",
+      "-database", "postgres://postgres:password@db:5432/pullrequest_test?sslmode=disable",
+      "up"
+    ]
+    volumes:
+      - ../../database/migrations:/migrations
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - pullrequest-inator-test
+
+networks:
+  pullrequest-inator-test:

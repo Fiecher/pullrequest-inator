@@ -114,11 +114,18 @@ func (s *PullRequestService) ReassignReviewer(ctx context.Context, userID int64,
 		return nil, fmt.Errorf("find PR: %w", err)
 	}
 
-	status, err := s.statusRepo.FindByID(ctx, pr.StatusID)
-	if err != nil && !errors.Is(err, pg.ErrStatusNotFound) {
-		return nil, fmt.Errorf("find status: %w", err)
+	if pr.ReviewersIDs == nil {
+		pr.ReviewersIDs = make([]int64, 0)
 	}
-	if status != nil && status.Name == "MERGED" {
+	currentStatus := "OPEN"
+	if pr.StatusID > 0 {
+		st, err := s.statusRepo.FindByID(ctx, pr.StatusID)
+		if err == nil && st != nil {
+			currentStatus = st.Name
+		}
+	}
+
+	if currentStatus == "MERGED" {
 		return nil, ErrPRAlreadyMerged
 	}
 
@@ -137,7 +144,7 @@ func (s *PullRequestService) ReassignReviewer(ctx context.Context, userID int64,
 	if errors.Is(err, pg.ErrTeamNotFound) {
 		return nil, ErrTeamNotFound
 	} else if err != nil {
-		return nil, fmt.Errorf("find team for reviewer: %w", err)
+		return nil, fmt.Errorf("find team: %w", err)
 	}
 
 	var candidates []int64
@@ -167,17 +174,8 @@ func (s *PullRequestService) ReassignReviewer(ctx context.Context, userID int64,
 		return nil, fmt.Errorf("update PR: %w", err)
 	}
 
-	statusName := "OPEN"
-	if status != nil {
-		statusName = status.Name
-	} else {
-		if st, err := s.statusRepo.FindByID(ctx, pr.StatusID); err == nil && st != nil {
-			statusName = st.Name
-		}
-	}
-
 	return &dtos.ReassignReviewerResponse{
-		Pr:         *dtos.ModelToPullRequestDTO(pr, statusName),
+		Pr:         *dtos.ModelToPullRequestDTO(pr, currentStatus),
 		ReplacedBy: encoding.EncodeID(newReviewer),
 	}, nil
 }
@@ -209,13 +207,21 @@ func (s *PullRequestService) MarkAsMerged(ctx context.Context, prID int64) (*dto
 		return nil, fmt.Errorf("find PR: %w", err)
 	}
 
-	mergedStatus, err := s.getMergedStatus(ctx)
-	if err != nil {
-		return nil, err
+	currentStatus := "OPEN"
+	if pr.StatusID > 0 {
+		st, err := s.statusRepo.FindByID(ctx, pr.StatusID)
+		if err == nil && st != nil {
+			currentStatus = st.Name
+		}
 	}
 
-	if pr.StatusID == mergedStatus.ID {
-		return dtos.ModelToPullRequestDTO(pr, mergedStatus.Name), nil
+	if currentStatus == "MERGED" {
+		return dtos.ModelToPullRequestDTO(pr, "MERGED"), nil
+	}
+
+	mergedStatus, err := s.getMergedStatus(ctx)
+	if err != nil || mergedStatus == nil {
+		return nil, fmt.Errorf("cannot merge PR: merged status not found")
 	}
 
 	now := time.Now()
@@ -226,7 +232,7 @@ func (s *PullRequestService) MarkAsMerged(ctx context.Context, prID int64) (*dto
 		return nil, fmt.Errorf("update PR to merged: %w", err)
 	}
 
-	return dtos.ModelToPullRequestDTO(pr, mergedStatus.Name), nil
+	return dtos.ModelToPullRequestDTO(pr, "MERGED"), nil
 }
 
 func (s *PullRequestService) GetUserReviews(ctx context.Context, userID int64) (*dtos.UserGetReviewResponse, error) {
@@ -306,6 +312,9 @@ func (s *PullRequestService) getMergedStatus(ctx context.Context) (*models.Statu
 }
 
 func chooseRandomUsers(userIDs []int64, max int64) []int64 {
+	if len(userIDs) == 0 {
+		return []int64{}
+	}
 	n := int64(len(userIDs))
 	if n <= max {
 		cpy := make([]int64, len(userIDs))
