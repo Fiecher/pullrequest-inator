@@ -23,10 +23,10 @@ func NewPullRequestRepository(db *pgxpool.Pool) *PullRequestRepository {
 
 const (
 	insertPullRequestQuery = `
-		INSERT INTO pull_requests (title, author_id, status_id, merged_at)
-		VALUES ($1, $2, $3, $4)
-		RETURNING id, created_at, updated_at;
-	`
+       INSERT INTO pull_requests (id, title, author_id, status_id, merged_at)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING created_at, updated_at;
+    `
 	selectPullRequestByIDQuery = `
 		SELECT id, title, author_id, status_id, merged_at, created_at, updated_at
 		FROM pull_requests
@@ -78,11 +78,12 @@ func (r *PullRequestRepository) Create(ctx context.Context, pr *models.PullReque
 	if err := tx.QueryRow(
 		ctx,
 		insertPullRequestQuery,
+		pr.ID,
 		pr.Title,
 		pr.AuthorID,
 		pr.StatusID,
 		pr.MergedAt,
-	).Scan(&pr.ID, &pr.CreatedAt, &pr.UpdatedAt); err != nil {
+	).Scan(&pr.CreatedAt, &pr.UpdatedAt); err != nil {
 		return fmt.Errorf("insert pull request: %w", err)
 	}
 
