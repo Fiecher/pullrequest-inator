@@ -43,15 +43,8 @@ migrate-up:
 migrate-down:
 	migrate -path $(MIGRATE_PATH) -database "$(DB_URL)" down 1
 
-test:
-	go test -v -short ./internal/...
-
 test-e2e:
 	go test -v ./test/e2e
-
-coverage:
-	go test -coverprofile=coverage.out ./internal/...
-	go tool cover -html=coverage.out
 
 help:
 	@echo "Available commands:"
