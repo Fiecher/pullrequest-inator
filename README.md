@@ -1,6 +1,6 @@
 # pullrequest-inator
 
-- [README RU ver](https://github.com/Fiecher/pullrequest-inator/blob/main/README.en.md)
+- [README RU ver](https://github.com/Fiecher/pullrequest-inator/blob/main/README.ru.md)
 
 A microservice designed for automatically assigning reviewers to Pull Requests (PRs).
 It provides functionality for managing teams and team members.
