@@ -16,6 +16,7 @@ require (
 	github.com/dprotaso/go-yit v0.0.0-20251117151522-da16f3077589 // indirect
 	github.com/getkin/kin-openapi v0.133.0 // indirect
 	github.com/go-openapi/jsonpointer v0.22.3 // indirect
+	github.com/go-openapi/swag v0.25.3 // indirect
 	github.com/go-openapi/swag/jsonname v0.25.3 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect

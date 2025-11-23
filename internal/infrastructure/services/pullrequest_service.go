@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
 	"pullrequest-inator/internal/api/dtos"
 	"pullrequest-inator/internal/infrastructure/encoding"
 	"pullrequest-inator/internal/infrastructure/models"
@@ -160,7 +160,7 @@ func (s *PullRequestService) ReassignReviewer(ctx context.Context, userID int64,
 		return nil, ErrNoReviewCandidates
 	}
 
-	newReviewer := candidates[rand.Intn(len(candidates))]
+	newReviewer := candidates[rand.N(len(candidates))]
 	pr.ReviewersIDs[reviewerIndex] = newReviewer
 
 	if err := s.prRepo.Update(ctx, pr); err != nil {
@@ -261,7 +261,6 @@ func (s *PullRequestService) GetUserReviews(ctx context.Context, userID int64) (
 		UserId:       encoding.EncodeID(userID),
 		PullRequests: pullRequests,
 	}, nil
-
 }
 
 func isReviewer(reviewers []int64, userID int64) bool {

@@ -34,6 +34,9 @@ func main() {
 
 	pool, err := pgxpool.New(ctx, connString)
 	if err != nil {
+		if pool != nil {
+			pool.Close()
+		}
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 	defer pool.Close()
@@ -45,15 +48,18 @@ func main() {
 
 	prService, err := services.NewPullRequestService(userRepo, prRepo, teamRepo, statusRepo)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Failed to init pullrequest service: %v", err)
+		return
 	}
 	teamService, err := services.NewTeamService(teamRepo, userRepo)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Failed to init team service: %v", err)
+		return
 	}
 	userService, err := services.NewUserService(userRepo)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Failed to init user service: %v", err)
+		return
 	}
 
 	e := echo.New()
@@ -62,13 +68,14 @@ func main() {
 
 	server, err := api.NewServer(prService, teamService, userService)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Failed to init server: %v", err)
+		return
 	}
 
 	api.RegisterHandlers(e, server)
 
 	if err := e.Start(port); err != nil {
-		log.Fatal("Failed to start server:", err)
+		log.Printf("Failed to start server: %v", err)
+		return
 	}
-
 }
