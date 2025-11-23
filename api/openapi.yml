@@ -419,3 +419,19 @@ paths:
                     pull_request_name: Add search
                     author_id: u1
                     status: OPEN
+
+  /health:
+    get:
+      tags: [ Health ]
+      summary: Проверка доступности сервиса (Liveness Probe)
+      responses:
+        '200':
+          description: Сервис работает
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: OK
