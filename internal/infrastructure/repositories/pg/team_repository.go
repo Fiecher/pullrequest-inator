@@ -40,7 +40,9 @@ func (r *TeamRepository) Create(ctx context.Context, team *models.Team) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
 
 	if err := tx.QueryRow(ctx, insertTeamQuery, team.Name).Scan(&team.ID); err != nil {
 		return err
@@ -122,7 +124,9 @@ func (r *TeamRepository) Update(ctx context.Context, team *models.Team) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
 
 	cmd, err := tx.Exec(ctx, updateTeamQuery, team.Name, team.ID)
 	if err != nil {
@@ -150,7 +154,9 @@ func (r *TeamRepository) DeleteByID(ctx context.Context, id int64) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
 
 	cmd, err := tx.Exec(ctx, deleteTeamQuery, id)
 	if err != nil {
@@ -196,7 +202,9 @@ func (r *TeamRepository) CreateWithUsers(ctx context.Context, teamReq *dtos.Team
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
 
 	for _, member := range teamReq.Members {
 		id := encoding.DecodeID(member.UserId)

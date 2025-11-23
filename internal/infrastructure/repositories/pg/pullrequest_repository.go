@@ -71,7 +71,9 @@ func (r *PullRequestRepository) Create(ctx context.Context, pr *models.PullReque
 	if err != nil {
 		return fmt.Errorf("create transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
 
 	if err := tx.QueryRow(
 		ctx,
@@ -158,7 +160,9 @@ func (r *PullRequestRepository) Update(ctx context.Context, pr *models.PullReque
 	if err != nil {
 		return fmt.Errorf("start transaction for update: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
 
 	err = tx.QueryRow(
 		ctx,
