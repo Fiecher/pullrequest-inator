@@ -35,7 +35,7 @@ docker-compose up --build
 
 3. The service will be available at: `http://localhost:8080`
 
-## Тестирование
+## Testing
 
 The project includes E2E (End-to-End) tests, which spin up a separate Docker environment to verify real-world usage
 scenarios.
